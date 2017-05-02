@@ -1,8 +1,5 @@
 package com.adfer.game;
 
-/**
- * Created by adrianferenc on 29.04.2017.
- */
 public class Result {
 
     private boolean success;

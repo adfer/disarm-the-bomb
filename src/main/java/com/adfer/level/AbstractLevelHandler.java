@@ -1,50 +1,61 @@
 package com.adfer.level;
 
-import com.adfer.configuration.PrepareEnvironment;
+import com.adfer.configuration.RaspPiConfiguration;
+import com.adfer.game.Game;
 import com.adfer.game.Result;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-/**
- * Created by adrianferenc on 30.04.2017.
- */
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+
 public abstract class AbstractLevelHandler {
 
-    long startTime;
+    private static final Logger LOGGER = LoggerFactory.getLogger(AbstractLevelHandler.class);
 
-    abstract String getLevelName();
+    public abstract String getLevelName();
 
-    abstract Logger getLogger();
+    protected abstract Result getLevelLogic();
 
-    abstract long getLevelTimeInSeconds();
-
-    protected abstract Result runLevelLogic();
-
-    public final boolean isTimeout() {
-        return (System.currentTimeMillis() - startTime) / 1000 > getLevelTimeInSeconds();
-    }
-
-    public Result runLevel() {
+    public Result run(Game game) {
         Result result = null;
-        startTime = System.currentTimeMillis();
-        PrepareEnvironment.LCD.clear();
-        PrepareEnvironment.LCD.writeLineA(String.format("Starting %s", getLevelName()), true);
-        getLogger().info("Starting level {}", getLevelName());
-        while (!isTimeout() && result == null) {
-            result = runLevelLogic();
-            if (result != null) {
-                break;
+        LOGGER.info("Starting level {}", getLevelName());
+        RaspPiConfiguration.LCD.clear();
+        RaspPiConfiguration.LCD.writeLineA(String.format("Starting %s", getLevelName()), true);
+
+        ExecutorService executorService = prepareExecutorService();
+        Future<Result> levelLogicThread = executorService.submit(() -> getLevelLogic());
+
+        while (!game.isTimeout() && !levelLogicThread.isDone()) {
+            //level logic running
+        }
+        if (game.isTimeout()) {
+            LOGGER.error("Level " + getLevelName() + " terminated because of game timeout.");
+            levelLogicThread.cancel(true);
+            return new Result(false, "Game timeout. Level " + getLevelName() + " terminated.");
+        }
+        if (levelLogicThread.isDone()) {
+            try {
+                result = levelLogicThread.get();
+                LOGGER.info("Level {} done with result {}", getLevelName(), result.isSuccess());
+            } catch (InterruptedException | ExecutionException e) {
+                throw new RuntimeException(e);
             }
         }
-        getLogger().info("Level {} completed with result {}", getLevelName(), String.valueOf(result.isSuccess()).toUpperCase());
-        PrepareEnvironment.LCD.clear();
-        PrepareEnvironment.LCD.writeLineB(String.format("%s finished", getLevelName()), true);
-        try {
-            //TODO change it
-            Thread.sleep(1000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        LOGGER.info("Level {} completed with result {}", getLevelName(), String.valueOf(result.isSuccess()).toUpperCase());
+        RaspPiConfiguration.LCD.clear();
+        RaspPiConfiguration.LCD.writeLineA(String.format("%s completed!", getLevelName()), true);
         return result;
+    }
+
+    private ExecutorService prepareExecutorService() {
+        return Executors.newSingleThreadExecutor(r -> {
+            Thread thread = new Thread(r, "Level-" + getLevelName());
+            thread.setDaemon(true);
+            return thread;
+        });
     }
 
 }

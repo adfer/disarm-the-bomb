@@ -5,9 +5,6 @@ import com.pi4j.io.gpio.Pin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Created by adrianferenc on 30.04.2017.
- */
 public class LcdDisplay implements Runnable {
 
     public final static int LCD_ROWS = 2;
@@ -19,7 +16,7 @@ public class LcdDisplay implements Runnable {
 
     public final boolean DEBUG = false;
 
-    public final int SCROLL_SPEED = 500;
+    public final int SCROLL_SPEED = 300;
 
     private GpioLcdDisplay lcd;
 
@@ -31,7 +28,7 @@ public class LcdDisplay implements Runnable {
 
     private boolean scrollB = false;
 
-    private static final Logger log = LoggerFactory.getLogger(LcdDisplay.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(LcdDisplay.class);
 
     public LcdDisplay(Pin rs, Pin e, Pin d1, Pin d2, Pin d3, Pin d4) {
         if (!DEBUG) {
@@ -41,23 +38,40 @@ public class LcdDisplay implements Runnable {
     }
 
     public void clear() {
+        clearLineA();
+        clearLineB();
+    }
+
+    public void clearLineA() {
         if (!DEBUG) {
             scrollA = false;
-            scrollB = false;
             lineA = "";
+            lcd.clear(LCD_ROW_1);
+        }
+    }
+
+    public void clearLineB() {
+        if (!DEBUG) {
+            scrollB = false;
             lineB = "";
-            lcd.clear();
+            lcd.clear(LCD_ROW_2);
         }
     }
 
     public void writeLineA(String text, boolean scroll) {
-        this.lineA = SPACE_BEFORE_TEXT.concat(text.concat(SPACE_AFTER_TEXT));
+        this.lineA = text.concat(SPACE_AFTER_TEXT);
+        if (scroll) {
+            this.lineA = SPACE_BEFORE_TEXT.concat(this.lineA);
+        }
         this.scrollA = scroll;
         writeA(this.lineA);
     }
 
     public void writeLineB(String text, boolean scroll) {
-        this.lineB = SPACE_BEFORE_TEXT.concat(text.concat(SPACE_AFTER_TEXT));
+        this.lineB = text.concat(SPACE_AFTER_TEXT);
+        if (scroll) {
+            this.lineB = SPACE_BEFORE_TEXT.concat(this.lineB);
+        }
         this.scrollB = scroll;
         writeB(this.lineB);
     }
@@ -79,7 +93,7 @@ public class LcdDisplay implements Runnable {
 
             }
         } catch (InterruptedException e) {
-            log.error("Lcd Display shutdown.", e);
+            LOGGER.error("Lcd Display shutdown.", e);
         }
     }
 
@@ -92,7 +106,7 @@ public class LcdDisplay implements Runnable {
         if (!DEBUG) {
             lcd.writeln(LCD_ROW_1, output);
         } else {
-            log.debug(output);
+            LOGGER.debug(output);
         }
 
     }
@@ -105,7 +119,7 @@ public class LcdDisplay implements Runnable {
         if (!DEBUG) {
             lcd.writeln(LCD_ROW_2, output);
         } else {
-            log.debug(output);
+            LOGGER.debug(output);
         }
 
     }

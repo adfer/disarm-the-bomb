@@ -1,6 +1,6 @@
 package com.adfer.level;
 
-import com.adfer.configuration.PrepareEnvironment;
+import com.adfer.configuration.RaspPiConfiguration;
 import com.adfer.game.Result;
 import com.pi4j.io.gpio.GpioFactory;
 import com.pi4j.io.gpio.GpioPin;
@@ -11,48 +11,39 @@ import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-/**
- * Created by adrianferenc on 30.04.2017.
- */
 public class Level1 extends AbstractLevelHandler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Level1.class);
     private AtomicInteger count = new AtomicInteger();
 
     @Override
-    String getLevelName() {
+    public String getLevelName() {
         return Level.LEVEL1.name();
     }
 
     @Override
-    Logger getLogger() {
-        return LOGGER;
-    }
-
-    @Override
-    long getLevelTimeInSeconds() {
-        return 5;
-    }
-
-
-    @Override
-    protected Result runLevelLogic() {
-        GpioPin button = GpioFactory.getInstance().getProvisionedPin(PrepareEnvironment.BUTTON);
+    protected Result getLevelLogic() {
+        Result result = null;
+        GpioPin button = GpioFactory.getInstance().getProvisionedPin(RaspPiConfiguration.BUTTON);
         GpioPinListenerDigital pressButton = event -> {
             if (event.getState().isLow()) {
-                GpioPinDigitalOutput led = (GpioPinDigitalOutput) GpioFactory.getInstance().getProvisionedPin(PrepareEnvironment.RED_LED);
-                led.blink(500, 500);
+                GpioPinDigitalOutput led = (GpioPinDigitalOutput) GpioFactory.getInstance().getProvisionedPin(RaspPiConfiguration.RED_LED);
+                led.blink(500, 300);
                 LOGGER.info("Count is: {}", count.incrementAndGet());
             }
         };
         button.addListener(pressButton);
-        while (!isTimeout() || count.get() < 4) {
+        while (!Thread.interrupted()) {
             //wait for game selection
+            if (count.get() == 4) {
+                result = new Result(true, "Count == 4");
+                break;
+            }
         }
-
-        if (count.get() == 4) {
-            return new Result(true, "Count == 4");
+        button.removeAllListeners();
+        if (result == null) {
+            result = new Result(false, String.format("Count != 4. Count is %s", count));
         }
-        return new Result(false, String.format("Count != 4. Count is %s", count));
+        return result;
     }
 }

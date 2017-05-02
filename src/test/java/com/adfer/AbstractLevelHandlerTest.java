@@ -1,5 +1,6 @@
 package com.adfer;
 
+import com.adfer.game.Game;
 import com.adfer.game.Result;
 import com.adfer.level.Level;
 import com.adfer.level.AbstractLevelHandler;
@@ -18,9 +19,10 @@ public class AbstractLevelHandlerTest {
     public void shouldFinishLevelSuccessfully() throws Exception {
         //given
         AbstractLevelHandler AbstractLevelHandler = new Level1();
+        Game game = new Game.GameBuilder().build();
 
         //when
-        Result levelResult = AbstractLevelHandler.runLevel();
+        Result levelResult = AbstractLevelHandler.run(game);
 
         //then
         assertTrue(levelResult.isSuccess());
